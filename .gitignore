@@ -1,0 +1,16 @@
+# OS
+.DS_Store
+
+# IDE
+.idea/
+*.iml
+amplicode.xml
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+

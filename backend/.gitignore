@@ -1,0 +1,7 @@
+# Maven/Spring build output
+target/
+out/
+build/
+
+# Local runtime files
+*.log
