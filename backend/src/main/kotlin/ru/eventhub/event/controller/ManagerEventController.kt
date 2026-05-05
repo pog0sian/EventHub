@@ -16,7 +16,9 @@ import ru.eventhub.attendance.service.AttendanceService
 import ru.eventhub.auth.security.ActiveRoleGuard
 import ru.eventhub.auth.security.UserPrincipal
 import ru.eventhub.event.dto.CreateEventRequest
+import ru.eventhub.event.dto.EventRegistrationResponse
 import ru.eventhub.event.dto.EventResponse
+import ru.eventhub.event.service.EventRegistrationService
 import ru.eventhub.event.service.EventService
 import ru.eventhub.user.model.RoleName
 
@@ -24,6 +26,7 @@ import ru.eventhub.user.model.RoleName
 @RequestMapping("/api/manager/events")
 class ManagerEventController(
     private val eventService: EventService,
+    private val eventRegistrationService: EventRegistrationService,
     private val attendanceService: AttendanceService,
     private val activeRoleGuard: ActiveRoleGuard,
 ) {
@@ -59,6 +62,18 @@ class ManagerEventController(
     ): EventResponse {
         activeRoleGuard.requireActiveRole(RoleName.ORG_MANAGER)
         return eventService.publishByManager(
+            managerUserId = principal.id,
+            eventId = id,
+        )
+    }
+
+    @GetMapping("/{id}/registrations")
+    fun getRegistrations(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: Long,
+    ): List<EventRegistrationResponse> {
+        activeRoleGuard.requireActiveRole(RoleName.ORG_MANAGER)
+        return eventRegistrationService.getEventRegistrationsForManager(
             managerUserId = principal.id,
             eventId = id,
         )
