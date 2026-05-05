@@ -1,1 +1,21 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: eventhub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: eventhub
+      POSTGRES_USER: eventhub
+      POSTGRES_PASSWORD: eventhub
+    ports:
+      - "5432:5432"
+    volumes:
+      - eventhub-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventhub -d eventhub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  eventhub-postgres-data:
