@@ -9,5 +9,14 @@ interface OrganizationManagerRepository : JpaRepository<OrganizationManagerEntit
         userId: Long,
     ): Boolean
 
+    fun existsByUserIdAndActiveTrue(userId: Long): Boolean
+
+    fun findByOrganizationIdAndUserIdAndActiveTrue(
+        organizationId: Long,
+        userId: Long,
+    ): OrganizationManagerEntity?
+
     fun findAllByUserIdAndActiveTrue(userId: Long): List<OrganizationManagerEntity>
+
+    fun findAllByOrganizationIdAndActiveTrue(organizationId: Long): List<OrganizationManagerEntity>
 }

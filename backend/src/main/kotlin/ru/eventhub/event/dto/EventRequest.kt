@@ -34,3 +34,26 @@ data class CreateEventRequest(
     @field:Min(1)
     val capacity: Int? = null,
 )
+
+data class UpdateEventRequest(
+    @field:NotBlank
+    @field:Size(max = 255)
+    val title: String,
+
+    val description: String? = null,
+
+    @field:Size(max = 255)
+    val location: String? = null,
+
+    @field:NotNull
+    val startsAt: OffsetDateTime,
+
+    @field:NotNull
+    val endsAt: OffsetDateTime,
+
+    @field:Min(0)
+    val pointsReward: Int,
+
+    @field:Min(1)
+    val capacity: Int? = null,
+)

@@ -13,6 +13,7 @@ import ru.eventhub.event.model.EventStatus
 import ru.eventhub.event.repository.EventRepository
 import ru.eventhub.organization.service.OrganizationManagerService
 import ru.eventhub.organization.service.OrganizationService
+import ru.eventhub.event.dto.UpdateEventRequest
 
 @Service
 class EventService(
@@ -20,6 +21,13 @@ class EventService(
     private val organizationService: OrganizationService,
     private val organizationManagerService: OrganizationManagerService,
 ) {
+
+    private fun requireActiveOrganization(event: EventEntity) {
+        if (!event.organization.active) {
+            throw BadRequestException("Cannot manage events for inactive organization")
+        }
+    }
+
     @Transactional
     fun createByManager(
         managerUserId: Long,
@@ -34,6 +42,10 @@ class EventService(
         }
 
         val organization = organizationService.findEntityById(request.organizationId)
+
+        if (!organization.active) {
+            throw BadRequestException("Cannot create event for inactive organization")
+        }
 
         val event = eventRepository.save(
             EventEntity(
@@ -64,11 +76,89 @@ class EventService(
             throw ForbiddenException("Manager can publish events only for own organization")
         }
 
+        requireActiveOrganization(event)
+
         if (event.status != EventStatus.DRAFT) {
             throw BadRequestException("Only draft events can be published")
         }
 
         event.status = EventStatus.PUBLISHED
+
+        return event.toResponse()
+    }
+
+    @Transactional
+    fun cancelByManager(
+        managerUserId: Long,
+        eventId: Long,
+    ): EventResponse {
+        val event = findEntityById(eventId)
+        val organizationId = requireNotNull(event.organization.id)
+
+        if (!organizationManagerService.isActiveManagerOfOrganization(managerUserId, organizationId)) {
+            throw ForbiddenException("Manager can cancel events only for own organization")
+        }
+
+        if (event.status != EventStatus.DRAFT && event.status != EventStatus.PUBLISHED) {
+            throw BadRequestException("Only draft or published events can be cancelled")
+        }
+
+        event.status = EventStatus.CANCELLED
+
+        return event.toResponse()
+    }
+
+    @Transactional
+    fun completeByManager(
+        managerUserId: Long,
+        eventId: Long,
+    ): EventResponse {
+        val event = findEntityById(eventId)
+        val organizationId = requireNotNull(event.organization.id)
+
+        if (!organizationManagerService.isActiveManagerOfOrganization(managerUserId, organizationId)) {
+            throw ForbiddenException("Manager can complete events only for own organization")
+        }
+
+        if (event.status != EventStatus.PUBLISHED) {
+            throw BadRequestException("Only published events can be completed")
+        }
+
+        event.status = EventStatus.COMPLETED
+
+        return event.toResponse()
+    }
+
+    @Transactional
+    fun updateByManager(
+        managerUserId: Long,
+        eventId: Long,
+        request: UpdateEventRequest,
+    ): EventResponse {
+        if (request.endsAt <= request.startsAt) {
+            throw BadRequestException("Event end date must be after start date")
+        }
+
+        val event = findEntityById(eventId)
+        val organizationId = requireNotNull(event.organization.id)
+
+        if (!organizationManagerService.isActiveManagerOfOrganization(managerUserId, organizationId)) {
+            throw ForbiddenException("Manager can update events only for own organization")
+        }
+
+        requireActiveOrganization(event)
+
+        if (event.status == EventStatus.COMPLETED || event.status == EventStatus.CANCELLED) {
+            throw BadRequestException("Completed or cancelled events cannot be updated")
+        }
+
+        event.title = request.title.trim()
+        event.description = request.description?.trim()?.takeIf { it.isNotBlank() }
+        event.location = request.location?.trim()?.takeIf { it.isNotBlank() }
+        event.startsAt = request.startsAt
+        event.endsAt = request.endsAt
+        event.pointsReward = request.pointsReward
+        event.capacity = request.capacity
 
         return event.toResponse()
     }
@@ -101,6 +191,21 @@ class EventService(
 
         return eventRepository.findAllByOrganizationId(organizationId)
             .map { it.toResponse() }
+    }
+
+    @Transactional(readOnly = true)
+    fun getByIdForManager(
+        managerUserId: Long,
+        eventId: Long,
+    ): EventResponse {
+        val event = findEntityById(eventId)
+        val organizationId = requireNotNull(event.organization.id)
+
+        if (!organizationManagerService.isActiveManagerOfOrganization(managerUserId, organizationId)) {
+            throw ForbiddenException("Manager can view events only for own organization")
+        }
+
+        return event.toResponse()
     }
 
     @Transactional(readOnly = true)

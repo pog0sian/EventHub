@@ -25,4 +25,16 @@ interface EventRegistrationRepository : JpaRepository<EventRegistrationEntity, L
         eventId: Long,
         status: EventRegistrationStatus,
     ): List<EventRegistrationEntity>
+
+    fun findByEventIdAndUserIdAndStatus(
+        eventId: Long,
+        userId: Long,
+        status: EventRegistrationStatus,
+    ): EventRegistrationEntity?
+
+    fun findByEventIdAndUserId(
+        eventId: Long,
+        userId: Long,
+    ): EventRegistrationEntity?
+
 }

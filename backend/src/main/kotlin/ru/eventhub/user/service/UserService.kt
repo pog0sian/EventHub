@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional
 import ru.eventhub.common.exception.NotFoundException
 import ru.eventhub.user.dto.UserResponse
 import ru.eventhub.user.dto.toResponse
+import ru.eventhub.user.entity.UserEntity
 import ru.eventhub.user.repository.UserRepository
 
 @Service
@@ -17,7 +18,22 @@ class UserService(
     }
 
     @Transactional(readOnly = true)
-    fun findEntityById(id: Long) =
-        userRepository.findById(id)
+    fun getAll(): List<UserResponse> {
+        return userRepository.findAll()
+            .map { it.toResponse() }
+    }
+
+    @Transactional(readOnly = true)
+    fun findEntityById(id: Long): UserEntity {
+        return userRepository.findById(id)
             .orElseThrow { NotFoundException("User not found") }
+    }
+
+    @Transactional
+    fun deactivate(id: Long): UserResponse {
+        val user = findEntityById(id)
+        user.enabled = false
+
+        return user.toResponse()
+    }
 }

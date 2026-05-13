@@ -16,6 +16,8 @@ import ru.eventhub.reward.dto.RewardResponse
 import ru.eventhub.reward.service.RewardPurchaseService
 import ru.eventhub.reward.service.RewardService
 import ru.eventhub.user.model.RoleName
+import org.springframework.web.bind.annotation.PutMapping
+import ru.eventhub.reward.dto.UpdateRewardRequest
 
 @RestController
 @RequestMapping("/api/admin/rewards")
@@ -31,6 +33,26 @@ class AdminRewardController(
     ): RewardResponse {
         activeRoleGuard.requireActiveRole(RoleName.ADMIN)
         return rewardService.create(request)
+    }
+
+    @PutMapping("/{id}")
+    fun update(
+        @PathVariable id: Long,
+        @Valid @RequestBody request: UpdateRewardRequest,
+    ): RewardResponse {
+        activeRoleGuard.requireActiveRole(RoleName.ADMIN)
+        return rewardService.update(
+            id = id,
+            request = request,
+        )
+    }
+
+    @PostMapping("/{id}/deactivate")
+    fun deactivate(
+        @PathVariable id: Long,
+    ): RewardResponse {
+        activeRoleGuard.requireActiveRole(RoleName.ADMIN)
+        return rewardService.deactivate(id)
     }
 
     @GetMapping

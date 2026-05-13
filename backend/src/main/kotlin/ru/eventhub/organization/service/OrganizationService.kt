@@ -9,6 +9,7 @@ import ru.eventhub.organization.dto.OrganizationResponse
 import ru.eventhub.organization.dto.toResponse
 import ru.eventhub.organization.entity.OrganizationEntity
 import ru.eventhub.organization.repository.OrganizationRepository
+import ru.eventhub.organization.dto.UpdateOrganizationRequest
 
 @Service
 class OrganizationService(
@@ -29,6 +30,34 @@ class OrganizationService(
                 contactEmail = request.contactEmail?.trim()?.lowercase()?.takeIf { it.isNotBlank() },
             ),
         )
+
+        return organization.toResponse()
+    }
+
+    @Transactional
+    fun update(
+        id: Long,
+        request: UpdateOrganizationRequest,
+    ): OrganizationResponse {
+        val organization = findEntityById(id)
+        val normalizedName = request.name.trim()
+
+        if (organization.name != normalizedName && organizationRepository.existsByName(normalizedName)) {
+            throw BadRequestException("Organization name is already used")
+        }
+
+        organization.name = normalizedName
+        organization.description = request.description?.trim()?.takeIf { it.isNotBlank() }
+        organization.contactEmail = request.contactEmail?.trim()?.lowercase()?.takeIf { it.isNotBlank() }
+        organization.active = request.active
+
+        return organization.toResponse()
+    }
+
+    @Transactional
+    fun deactivate(id: Long): OrganizationResponse {
+        val organization = findEntityById(id)
+        organization.active = false
 
         return organization.toResponse()
     }

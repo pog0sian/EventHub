@@ -1,81 +1,128 @@
 <script setup lang="ts">
-import * as z from 'zod'
-import type { FormSubmitEvent, AuthFormField } from '@nuxt/ui'
+import { computed, reactive } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
+import { toast } from 'vue-sonner'
 
-const fields: AuthFormField[] = [
-  {
-    name: 'email',
-    type: 'email',
-    label: 'Email',
-    placeholder: 'Введите ваш email',
-    required: true
-  },
-  {
-    name: 'lastName',
-    type: 'text',
-    label: 'Фамилия',
-    placeholder: 'Введите вашу фамилию',
-    required: true
-  },
-  {
-    name: 'firstName',
-    type: 'text',
-    label: 'Имя',
-    placeholder: 'Введите ваше имя',
-    required: true
-  },
-  {
-    name: 'middleName',
-    type: 'text',
-    label: 'Отчество',
-    placeholder: 'Введите ваше отчество',
-    required: false
-  },
-  {
-    name: 'password',
-    label: 'Пароль',
-    type: 'password',
-    placeholder: 'Введите ваш пароль',
-    required: true
-  }
-]
+import { useAuthStore } from '@/entities/auth/model/auth.store'
+import { getApiErrorMessage } from '@/shared/api/client'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
-const schema = z.object({
-  email: z.email('Некорректный email'),
-  lastName: z.string('Фамилия обязательна').min(2, 'Фамилия должна быть не менее 2 символов'),
-  firstName: z.string('Имя обязательно').min(2, 'Имя должно быть не менее 2 символов'),
-  middleName: z.string().optional(),
-  password: z.string('Пароль обязателен').min(8, 'Пароль должен быть не менее 8 символов')
+const authStore = useAuthStore()
+const router = useRouter()
+
+const form = reactive({
+  email: '',
+  lastName: '',
+  firstName: '',
+  patronymic: '',
+  password: '',
 })
 
-type Schema = z.output<typeof schema>
+const canSubmit = computed(() => (
+    form.email.trim().length > 0
+    && form.lastName.trim().length >= 2
+    && form.firstName.trim().length >= 2
+    && form.password.length >= 8
+))
 
-function onSubmit(payload: FormSubmitEvent<Schema>) {
-  console.log('Submitted', payload)
+async function onSubmit(): Promise<void> {
+  if (!canSubmit.value || authStore.isLoading) {
+    return
+  }
+
+  try {
+    await authStore.registerStudent({
+      email: form.email.trim(),
+      password: form.password,
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      patronymic: form.patronymic.trim() || null,
+    })
+
+    toast.success('Аккаунт создан')
+    await router.push('/student')
+  } catch (error) {
+    toast.error('Не удалось зарегистрироваться', {
+      description: getApiErrorMessage(error),
+    })
+  }
 }
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
-    <UPageCard class="w-full max-w-md">
-      <UAuthForm
-        :schema="schema"
-        title="Регистрация"
-        icon="i-lucide-user-plus"
-        :fields="fields"
-        :submit="{
-          label: 'Зарегистрироваться'
-        }"
-        @submit="onSubmit"
-      >
-        <template #description>
-          Уже есть аккаунт? <ULink to="/login" class="text-primary font-medium">Войдите</ULink>
-        </template>
-      </UAuthForm>
-    </UPageCard>
-  </div>
+  <main class="flex min-h-screen items-center justify-center bg-muted/30 p-6">
+    <Card class="w-full max-w-md rounded-lg">
+      <CardHeader>
+        <CardTitle class="text-2xl">
+          Регистрация
+        </CardTitle>
+        <CardDescription>
+          Новый пользователь получает роль студента.
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent>
+        <form class="space-y-5" @submit.prevent="onSubmit">
+          <div class="space-y-2">
+            <Label for="email">Email</Label>
+            <Input
+                id="email"
+                v-model="form.email"
+                autocomplete="email"
+                placeholder="student@example.com"
+                type="email"
+            />
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="space-y-2">
+              <Label for="lastName">Фамилия</Label>
+              <Input id="lastName" v-model="form.lastName" autocomplete="family-name" />
+            </div>
+
+            <div class="space-y-2">
+              <Label for="firstName">Имя</Label>
+              <Input id="firstName" v-model="form.firstName" autocomplete="given-name" />
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <Label for="patronymic">Отчество</Label>
+            <Input id="patronymic" v-model="form.patronymic" autocomplete="additional-name" />
+          </div>
+
+          <div class="space-y-2">
+            <Label for="password">Пароль</Label>
+            <Input
+                id="password"
+                v-model="form.password"
+                autocomplete="new-password"
+                placeholder="Минимум 8 символов"
+                type="password"
+            />
+          </div>
+
+          <Button class="w-full" :disabled="!canSubmit || authStore.isLoading" type="submit">
+            {{ authStore.isLoading ? 'Создаем...' : 'Зарегистрироваться' }}
+          </Button>
+
+          <p class="text-center text-sm text-muted-foreground">
+            Уже есть аккаунт?
+            <RouterLink class="font-medium text-primary underline-offset-4 hover:underline" to="/login">
+              Войти
+            </RouterLink>
+          </p>
+        </form>
+      </CardContent>
+    </Card>
+  </main>
 </template>
-
-<style scoped>
-
-</style>

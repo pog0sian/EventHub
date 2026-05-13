@@ -5,3 +5,6 @@ build/
 
 # Local runtime files
 *.log
+
+# Environment variables file
+.env

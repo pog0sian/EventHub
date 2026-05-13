@@ -26,13 +26,15 @@ class JwtAuthenticationFilter(
             val userId = jwtService.extractUserId(token)
             val userPrincipal = userDetailsService.loadUserById(userId)
 
-            val authentication = UsernamePasswordAuthenticationToken(
-                userPrincipal,
-                null,
-                userPrincipal.authorities,
-            )
+            if (userPrincipal.isEnabled) {
+                val authentication = UsernamePasswordAuthenticationToken(
+                    userPrincipal,
+                    null,
+                    userPrincipal.authorities,
+                )
 
-            SecurityContextHolder.getContext().authentication = authentication
+                SecurityContextHolder.getContext().authentication = authentication
+            }
         }
 
         filterChain.doFilter(request, response)

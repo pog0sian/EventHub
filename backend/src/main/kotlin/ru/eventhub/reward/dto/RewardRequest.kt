@@ -17,3 +17,19 @@ data class CreateRewardRequest(
     @field:Min(0)
     val stock: Int,
 )
+
+data class UpdateRewardRequest(
+    @field:NotBlank
+    @field:Size(max = 255)
+    val title: String,
+
+    val description: String? = null,
+
+    @field:Min(1)
+    val cost: Int,
+
+    @field:Min(0)
+    val stock: Int,
+
+    val active: Boolean,
+)

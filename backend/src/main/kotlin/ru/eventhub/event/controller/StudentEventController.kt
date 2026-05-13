@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.DeleteMapping
 import ru.eventhub.auth.security.ActiveRoleGuard
 import ru.eventhub.auth.security.UserPrincipal
 import ru.eventhub.event.dto.EventRegistrationResponse
@@ -43,6 +44,18 @@ class StudentEventController(
     ): EventRegistrationResponse {
         activeRoleGuard.requireActiveRole(RoleName.STUDENT)
         return eventRegistrationService.registerStudent(
+            studentUserId = principal.id,
+            eventId = id,
+        )
+    }
+
+    @DeleteMapping("/events/{id}/registrations")
+    fun cancelRegistration(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: Long,
+    ): EventRegistrationResponse {
+        activeRoleGuard.requireActiveRole(RoleName.STUDENT)
+        return eventRegistrationService.cancelStudentRegistration(
             studentUserId = principal.id,
             eventId = id,
         )

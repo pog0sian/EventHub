@@ -17,6 +17,10 @@ import ru.eventhub.organization.dto.OrganizationResponse
 import ru.eventhub.organization.service.OrganizationManagerService
 import ru.eventhub.organization.service.OrganizationService
 import ru.eventhub.user.model.RoleName
+import org.springframework.web.bind.annotation.PutMapping
+import ru.eventhub.organization.dto.UpdateOrganizationRequest
+import org.springframework.web.bind.annotation.DeleteMapping
+import ru.eventhub.organization.dto.OrganizationManagerDetailsResponse
 
 @RestController
 @RequestMapping("/api/admin/organizations")
@@ -34,6 +38,26 @@ class AdminOrganizationController(
         return organizationService.create(request)
     }
 
+    @PutMapping("/{id}")
+    fun update(
+        @PathVariable id: Long,
+        @Valid @RequestBody request: UpdateOrganizationRequest,
+    ): OrganizationResponse {
+        activeRoleGuard.requireActiveRole(RoleName.ADMIN)
+        return organizationService.update(
+            id = id,
+            request = request,
+        )
+    }
+
+    @PostMapping("/{id}/deactivate")
+    fun deactivate(
+        @PathVariable id: Long,
+    ): OrganizationResponse {
+        activeRoleGuard.requireActiveRole(RoleName.ADMIN)
+        return organizationService.deactivate(id)
+    }
+
     @GetMapping
     fun getAll(): List<OrganizationResponse> {
         activeRoleGuard.requireActiveRole(RoleName.ADMIN)
@@ -46,6 +70,14 @@ class AdminOrganizationController(
         return organizationService.getById(id)
     }
 
+    @GetMapping("/{id}/managers")
+    fun getManagers(
+        @PathVariable id: Long,
+    ): List<OrganizationManagerDetailsResponse> {
+        activeRoleGuard.requireActiveRole(RoleName.ADMIN)
+        return organizationManagerService.getOrganizationManagers(id)
+    }
+
     @PostMapping("/{id}/managers")
     @ResponseStatus(HttpStatus.CREATED)
     fun assignManager(
@@ -56,6 +88,18 @@ class AdminOrganizationController(
         return organizationManagerService.assignManager(
             organizationId = id,
             userId = request.userId,
+        )
+    }
+
+    @DeleteMapping("/{id}/managers/{userId}")
+    fun removeManager(
+        @PathVariable id: Long,
+        @PathVariable userId: Long,
+    ): OrganizationManagerResponse {
+        activeRoleGuard.requireActiveRole(RoleName.ADMIN)
+        return organizationManagerService.removeManager(
+            organizationId = id,
+            userId = userId,
         )
     }
 }

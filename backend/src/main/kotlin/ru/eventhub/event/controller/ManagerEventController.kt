@@ -21,6 +21,8 @@ import ru.eventhub.event.dto.EventResponse
 import ru.eventhub.event.service.EventRegistrationService
 import ru.eventhub.event.service.EventService
 import ru.eventhub.user.model.RoleName
+import org.springframework.web.bind.annotation.PutMapping
+import ru.eventhub.event.dto.UpdateEventRequest
 
 @RestController
 @RequestMapping("/api/manager/events")
@@ -55,6 +57,18 @@ class ManagerEventController(
         )
     }
 
+    @GetMapping("/{id}")
+    fun getById(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: Long,
+    ): EventResponse {
+        activeRoleGuard.requireActiveRole(RoleName.ORG_MANAGER)
+        return eventService.getByIdForManager(
+            managerUserId = principal.id,
+            eventId = id,
+        )
+    }
+
     @PostMapping("/{id}/publish")
     fun publish(
         @AuthenticationPrincipal principal: UserPrincipal,
@@ -64,6 +78,44 @@ class ManagerEventController(
         return eventService.publishByManager(
             managerUserId = principal.id,
             eventId = id,
+        )
+    }
+
+    @PostMapping("/{id}/cancel")
+    fun cancel(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: Long,
+    ): EventResponse {
+        activeRoleGuard.requireActiveRole(RoleName.ORG_MANAGER)
+        return eventService.cancelByManager(
+            managerUserId = principal.id,
+            eventId = id,
+        )
+    }
+
+    @PostMapping("/{id}/complete")
+    fun complete(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: Long,
+    ): EventResponse {
+        activeRoleGuard.requireActiveRole(RoleName.ORG_MANAGER)
+        return eventService.completeByManager(
+            managerUserId = principal.id,
+            eventId = id,
+        )
+    }
+
+    @PutMapping("/{id}")
+    fun update(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: Long,
+        @Valid @RequestBody request: UpdateEventRequest,
+    ): EventResponse {
+        activeRoleGuard.requireActiveRole(RoleName.ORG_MANAGER)
+        return eventService.updateByManager(
+            managerUserId = principal.id,
+            eventId = id,
+            request = request,
         )
     }
 

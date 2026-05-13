@@ -8,6 +8,7 @@ import ru.eventhub.reward.dto.RewardResponse
 import ru.eventhub.reward.dto.toResponse
 import ru.eventhub.reward.entity.RewardEntity
 import ru.eventhub.reward.repository.RewardRepository
+import ru.eventhub.reward.dto.UpdateRewardRequest
 
 @Service
 class RewardService(
@@ -23,6 +24,30 @@ class RewardService(
                 stock = request.stock,
             ),
         )
+
+        return reward.toResponse()
+    }
+
+    @Transactional
+    fun update(
+        id: Long,
+        request: UpdateRewardRequest,
+    ): RewardResponse {
+        val reward = findEntityById(id)
+
+        reward.title = request.title.trim()
+        reward.description = request.description?.trim()?.takeIf { it.isNotBlank() }
+        reward.cost = request.cost
+        reward.stock = request.stock
+        reward.active = request.active
+
+        return reward.toResponse()
+    }
+
+    @Transactional
+    fun deactivate(id: Long): RewardResponse {
+        val reward = findEntityById(id)
+        reward.active = false
 
         return reward.toResponse()
     }

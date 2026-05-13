@@ -31,12 +31,12 @@ class EventRegistrationService(
             throw BadRequestException("Only published events are available for registration")
         }
 
-        if (eventRegistrationRepository.existsByEventIdAndUserIdAndStatus(
-                eventId = eventId,
-                userId = studentUserId,
-                status = EventRegistrationStatus.REGISTERED,
-            )
-        ) {
+        val existingRegistration = eventRegistrationRepository.findByEventIdAndUserId(
+            eventId = eventId,
+            userId = studentUserId,
+        )
+
+        if (existingRegistration?.status == EventRegistrationStatus.REGISTERED) {
             throw BadRequestException("Student is already registered for this event")
         }
 
@@ -52,6 +52,11 @@ class EventRegistrationService(
             }
         }
 
+        if (existingRegistration?.status == EventRegistrationStatus.CANCELLED) {
+            existingRegistration.status = EventRegistrationStatus.REGISTERED
+            return existingRegistration.toResponse()
+        }
+
         val student = userService.findEntityById(studentUserId)
 
         val registration = eventRegistrationRepository.save(
@@ -61,6 +66,26 @@ class EventRegistrationService(
                 status = EventRegistrationStatus.REGISTERED,
             ),
         )
+
+        return registration.toResponse()
+    }
+
+    @Transactional
+    fun cancelStudentRegistration(
+        studentUserId: Long,
+        eventId: Long,
+    ): EventRegistrationResponse {
+        val registration = eventRegistrationRepository.findByEventIdAndUserIdAndStatus(
+            eventId = eventId,
+            userId = studentUserId,
+            status = EventRegistrationStatus.REGISTERED,
+        ) ?: throw BadRequestException("Student is not registered for this event")
+
+        if (registration.event.status != EventStatus.PUBLISHED) {
+            throw BadRequestException("Only published event registrations can be cancelled")
+        }
+
+        registration.status = EventRegistrationStatus.CANCELLED
 
         return registration.toResponse()
     }

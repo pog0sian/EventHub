@@ -15,3 +15,17 @@ data class CreateOrganizationRequest(
     @field:Size(max = 255)
     val contactEmail: String? = null,
 )
+
+data class UpdateOrganizationRequest(
+    @field:NotBlank
+    @field:Size(max = 255)
+    val name: String,
+
+    val description: String? = null,
+
+    @field:Email
+    @field:Size(max = 255)
+    val contactEmail: String? = null,
+
+    val active: Boolean,
+)

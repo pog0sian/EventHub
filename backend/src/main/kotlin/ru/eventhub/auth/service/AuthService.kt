@@ -69,7 +69,11 @@ class AuthService(
         val user = userRepository.findByEmail(normalizedEmail)
             ?: throw BadRequestException("Invalid email or password")
 
-        if (!user.enabled || !passwordEncoder.matches(request.password, user.passwordHash)) {
+        if (!user.enabled) {
+            throw BadRequestException("User account is disabled")
+        }
+
+        if (!passwordEncoder.matches(request.password, user.passwordHash)) {
             throw BadRequestException("Invalid email or password")
         }
 

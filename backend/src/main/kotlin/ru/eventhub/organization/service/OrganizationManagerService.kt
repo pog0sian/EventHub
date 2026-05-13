@@ -13,6 +13,9 @@ import ru.eventhub.user.model.RoleName
 import ru.eventhub.user.repository.RoleRepository
 import ru.eventhub.user.repository.UserRepository
 import ru.eventhub.user.repository.UserRoleRepository
+import ru.eventhub.organization.dto.OrganizationResponse
+import ru.eventhub.organization.dto.OrganizationManagerDetailsResponse
+import ru.eventhub.organization.dto.toDetailsResponse
 
 @Service
 class OrganizationManagerService(
@@ -66,5 +69,34 @@ class OrganizationManagerService(
             organizationId = organizationId,
             userId = userId,
         )
+    }
+
+    @Transactional(readOnly = true)
+    fun getManagerOrganizations(userId: Long): List<OrganizationResponse> {
+        return organizationManagerRepository.findAllByUserIdAndActiveTrue(userId)
+            .map { it.organization.toResponse() }
+    }
+
+    @Transactional(readOnly = true)
+    fun getOrganizationManagers(organizationId: Long): List<OrganizationManagerDetailsResponse> {
+        organizationService.findEntityById(organizationId)
+
+        return organizationManagerRepository.findAllByOrganizationIdAndActiveTrue(organizationId)
+            .map { it.toDetailsResponse() }
+    }
+
+    @Transactional
+    fun removeManager(
+        organizationId: Long,
+        userId: Long,
+    ): OrganizationManagerResponse {
+        val organizationManager = organizationManagerRepository.findByOrganizationIdAndUserIdAndActiveTrue(
+            organizationId = organizationId,
+            userId = userId,
+        ) ?: throw NotFoundException("Active organization manager not found")
+
+        organizationManager.active = false
+
+        return organizationManager.toResponse()
     }
 }
