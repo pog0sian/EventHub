@@ -40,7 +40,7 @@ class RewardPurchaseService(
         val pointTransaction = pointService.spendPoints(
             user = user,
             amount = reward.cost,
-            description = "Reward purchase: ${reward.title}",
+            description = "Покупка награды: ${reward.title}",
         )
 
         reward.stock -= 1

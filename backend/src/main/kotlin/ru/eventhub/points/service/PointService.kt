@@ -45,7 +45,7 @@ class PointService(
                 event = event,
                 amount = event.pointsReward,
                 type = PointTransactionType.EVENT_ATTENDANCE,
-                description = "Points for attending event: ${event.title}",
+                description = "Баллы за посещение мероприятия: ${event.title}",
             ),
         )
 
