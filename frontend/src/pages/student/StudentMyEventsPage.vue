@@ -24,13 +24,11 @@ const registrations = ref<EventRegistrationResponse[]>([])
 const statusLabels: Record<EventRegistrationStatus, string> = {
   REGISTERED: 'Записан',
   CANCELLED: 'Отменено',
-  ATTENDED: 'Посещено',
 }
 
 const statusVariants: Record<EventRegistrationStatus, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   REGISTERED: 'default',
   CANCELLED: 'secondary',
-  ATTENDED: 'outline',
 }
 
 const filteredRegistrations = computed(() => {
@@ -89,7 +87,7 @@ onMounted(loadRegistrations)
             Мои события
           </h1>
           <p class="text-muted-foreground">
-            Регистрации, посещения и отмененные записи.
+            Активные и отмененные регистрации.
           </p>
         </div>
 
@@ -106,9 +104,6 @@ onMounted(loadRegistrations)
           </TabsTrigger>
           <TabsTrigger value="REGISTERED">
             Активные
-          </TabsTrigger>
-          <TabsTrigger value="ATTENDED">
-            Посещенные
           </TabsTrigger>
           <TabsTrigger value="CANCELLED">
             Отмененные

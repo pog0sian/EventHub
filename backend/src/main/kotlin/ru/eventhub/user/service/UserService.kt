@@ -23,6 +23,11 @@ class UserService(
             .map { it.toResponse() }
     }
 
+    fun findEntityByIdForUpdate(id: Long): UserEntity {
+        return userRepository.findByIdForUpdate(id)
+            ?: throw NotFoundException("User not found")
+    }
+
     @Transactional(readOnly = true)
     fun findEntityById(id: Long): UserEntity {
         return userRepository.findById(id)

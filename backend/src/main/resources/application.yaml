@@ -8,6 +8,16 @@ spring:
     password: ${DB_PASSWORD:eventhub}
     driver-class-name: org.postgresql.Driver
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  cache:
+    redis:
+      time-to-live: 10m
+      cache-null-values: false
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -25,11 +35,24 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
 app:
+  scheduling:
+    event-status:
+      fixed-delay-ms: ${EVENT_STATUS_SCHEDULER_DELAY_MS:60000}
+
   jwt:
     secret: ${JWT_SECRET:eventhub-local-development-secret-key-change-me-minimum-32-characters}
     access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:20}

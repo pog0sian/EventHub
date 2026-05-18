@@ -14,6 +14,7 @@ import ru.eventhub.event.repository.EventRepository
 import ru.eventhub.organization.service.OrganizationManagerService
 import ru.eventhub.organization.service.OrganizationService
 import ru.eventhub.event.dto.UpdateEventRequest
+import java.time.OffsetDateTime
 
 @Service
 class EventService(
@@ -130,6 +131,20 @@ class EventService(
     }
 
     @Transactional
+    fun completeOverduePublishedEvents(now: OffsetDateTime = OffsetDateTime.now()): Int {
+        val overdueEvents = eventRepository.findAllByStatusAndEndsAtBefore(
+            status = EventStatus.PUBLISHED,
+            endsAt = now,
+        )
+
+        overdueEvents.forEach { event ->
+            event.status = EventStatus.COMPLETED
+        }
+
+        return overdueEvents.size
+    }
+
+    @Transactional
     fun updateByManager(
         managerUserId: Long,
         eventId: Long,
@@ -217,6 +232,11 @@ class EventService(
     fun getByOrganization(organizationId: Long): List<EventResponse> {
         return eventRepository.findAllByOrganizationId(organizationId)
             .map { it.toResponse() }
+    }
+
+    fun findEntityByIdForUpdate(id: Long): EventEntity {
+        return eventRepository.findByIdForUpdate(id)
+            ?: throw NotFoundException("Event not found")
     }
 
     @Transactional(readOnly = true)

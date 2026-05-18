@@ -63,6 +63,7 @@ class PointService(
         }
 
         val userId = requireNotNull(user.id)
+        val lockedUser = userService.findEntityByIdForUpdate(userId)
         val balance = pointTransactionRepository.getBalanceByUserId(userId)
 
         if (balance < amount) {
@@ -71,7 +72,7 @@ class PointService(
 
         return pointTransactionRepository.save(
             PointTransactionEntity(
-                user = user,
+                user = lockedUser,
                 amount = -amount,
                 type = PointTransactionType.REWARD_PURCHASE,
                 description = description,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { toast } from 'vue-sonner'
-import { CalendarDays, Plus, Search } from 'lucide-vue-next'
+import { CalendarDays, Pencil, Plus, Search } from 'lucide-vue-next'
 
 import {
   cancelManagerEvent,
@@ -9,6 +9,7 @@ import {
   createManagerEvent,
   getManagerEventsByOrganization,
   publishManagerEvent,
+  updateManagerEvent,
 } from '@/entities/event/api'
 import type { EventResponse } from '@/entities/event/types'
 import { getMyManagerOrganizations } from '@/entities/organization/api'
@@ -41,8 +42,11 @@ import { Textarea } from '@/components/ui/textarea'
 
 const isLoading = ref(true)
 const isCreateOpen = ref(false)
+const isEditOpen = ref(false)
 const isCreating = ref(false)
+const isUpdating = ref(false)
 const pendingEventId = ref<number | null>(null)
+const selectedEvent = ref<EventResponse | null>(null)
 const search = ref('')
 const selectedOrganizationId = ref<string>('')
 const organizations = ref<OrganizationResponse[]>([])
@@ -50,6 +54,16 @@ const events = ref<EventResponse[]>([])
 const activeOrganizations = computed(() => organizations.value.filter((organization) => organization.active))
 
 const createForm = reactive({
+  title: '',
+  description: '',
+  location: '',
+  startsAt: '',
+  endsAt: '',
+  pointsReward: 10,
+  capacity: '',
+})
+
+const editForm = reactive({
   title: '',
   description: '',
   location: '',
@@ -119,8 +133,40 @@ const createValidationMessage = computed(() => {
   return null
 })
 
-const canCreate = computed(() => createValidationMessage.value === null)
+const editValidationMessage = computed(() => {
+  if (!selectedEvent.value) {
+    return 'Выберите мероприятие'
+  }
 
+  if (!editForm.title.trim()) {
+    return 'Введите название'
+  }
+
+  if (!editForm.startsAt) {
+    return 'Укажите начало'
+  }
+
+  if (!editForm.endsAt) {
+    return 'Укажите окончание'
+  }
+
+  if (new Date(editForm.endsAt) <= new Date(editForm.startsAt)) {
+    return 'Окончание должно быть позже начала'
+  }
+
+  if (Number(editForm.pointsReward) < 0) {
+    return 'Баллы не могут быть отрицательными'
+  }
+
+  if (editForm.capacity && Number(editForm.capacity) < 1) {
+    return 'Количество мест должно быть больше 0'
+  }
+
+  return null
+})
+
+const canCreate = computed(() => createValidationMessage.value === null)
+const canEdit = computed(() => editValidationMessage.value === null)
 
 function toOffsetDateTime(value: string): string {
   return new Date(value).toISOString()
@@ -134,6 +180,18 @@ function resetCreateForm(): void {
   createForm.endsAt = ''
   createForm.pointsReward = 10
   createForm.capacity = ''
+}
+
+function openEditDialog(event: EventResponse): void {
+  selectedEvent.value = event
+  editForm.title = event.title
+  editForm.description = event.description ?? ''
+  editForm.location = event.location ?? ''
+  editForm.startsAt = toDateTimeLocalValue(new Date(event.startsAt))
+  editForm.endsAt = toDateTimeLocalValue(new Date(event.endsAt))
+  editForm.pointsReward = event.pointsReward
+  editForm.capacity = event.capacity === null ? '' : String(event.capacity)
+  isEditOpen.value = true
 }
 
 async function loadEvents(): Promise<void> {
@@ -211,6 +269,39 @@ async function createEvent(): Promise<void> {
     })
   } finally {
     isCreating.value = false
+  }
+}
+
+async function updateEvent(): Promise<void> {
+  const event = selectedEvent.value
+
+  if (!event || !canEdit.value || isUpdating.value) {
+    return
+  }
+
+  isUpdating.value = true
+
+  try {
+    await updateManagerEvent(event.id, {
+      title: editForm.title.trim(),
+      description: editForm.description.trim() || null,
+      location: editForm.location.trim() || null,
+      startsAt: toOffsetDateTime(editForm.startsAt),
+      endsAt: toOffsetDateTime(editForm.endsAt),
+      pointsReward: Number(editForm.pointsReward),
+      capacity: editForm.capacity ? Number(editForm.capacity) : null,
+    })
+
+    toast.success('Мероприятие обновлено')
+    isEditOpen.value = false
+    selectedEvent.value = null
+    await loadEvents()
+  } catch (error) {
+    toast.error('Не удалось обновить мероприятие', {
+      description: getApiErrorMessage(error),
+    })
+  } finally {
+    isUpdating.value = false
   }
 }
 
@@ -459,6 +550,16 @@ onMounted(loadEvents)
 
               <div class="mt-auto flex flex-wrap gap-2 pt-2">
                 <Button
+                    v-if="event.status === 'DRAFT' || event.status === 'PUBLISHED'"
+                    size="sm"
+                    variant="outline"
+                    @click="openEditDialog(event)"
+                >
+                  <Pencil class="mr-2 size-4" />
+                  Редактировать
+                </Button>
+
+                <Button
                     v-if="event.status === 'DRAFT'"
                     :disabled="pendingEventId === event.id"
                     size="sm"
@@ -491,6 +592,115 @@ onMounted(loadEvents)
           </div>
         </Card>
       </div>
+
+      <Dialog v-model:open="isEditOpen">
+        <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Редактировать мероприятие</DialogTitle>
+            <DialogDescription>
+              Можно изменить черновик или опубликованное мероприятие.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form class="space-y-6" @submit.prevent="updateEvent">
+            <div class="grid gap-4">
+              <div class="space-y-2">
+                <Label for="edit-event-title">Название</Label>
+                <Input
+                    id="edit-event-title"
+                    v-model="editForm.title"
+                    placeholder="Например, День карьеры в ИЦ"
+                />
+              </div>
+
+              <div class="space-y-2">
+                <Label for="edit-event-description">Описание</Label>
+                <Textarea
+                    id="edit-event-description"
+                    v-model="editForm.description"
+                    class="min-h-24 resize-none"
+                    placeholder="Кратко расскажите, что будет на мероприятии"
+                />
+              </div>
+            </div>
+
+            <div class="rounded-lg border bg-muted/25 p-4">
+              <h3 class="mb-4 text-sm font-medium">
+                Дата и место
+              </h3>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class="space-y-2">
+                  <Label for="edit-event-startsAt">Начало</Label>
+                  <Input id="edit-event-startsAt" v-model="editForm.startsAt" type="datetime-local" />
+                </div>
+
+                <div class="space-y-2">
+                  <Label for="edit-event-endsAt">Окончание</Label>
+                  <Input id="edit-event-endsAt" v-model="editForm.endsAt" :min="editForm.startsAt" type="datetime-local" />
+                </div>
+
+                <div class="space-y-2 sm:col-span-2">
+                  <Label for="edit-event-location">Место</Label>
+                  <Input
+                      id="edit-event-location"
+                      v-model="editForm.location"
+                      placeholder="Аудитория, корпус или онлайн-ссылка"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-lg border bg-muted/25 p-4">
+              <h3 class="mb-4 text-sm font-medium">
+                Условия участия
+              </h3>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div class="space-y-2">
+                  <Label for="edit-event-pointsReward">Баллы за посещение</Label>
+                  <Input
+                      id="edit-event-pointsReward"
+                      v-model.number="editForm.pointsReward"
+                      min="0"
+                      type="number"
+                  />
+                </div>
+
+                <div class="space-y-2">
+                  <Label for="edit-event-capacity">Количество мест</Label>
+                  <Input
+                      id="edit-event-capacity"
+                      v-model="editForm.capacity"
+                      min="1"
+                      placeholder="Без лимита"
+                      type="number"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p v-if="editValidationMessage" class="text-sm text-muted-foreground">
+                {{ editValidationMessage }}
+              </p>
+              <p v-else class="text-sm text-muted-foreground">
+                Изменения будут применены к выбранному мероприятию.
+              </p>
+
+              <div class="flex gap-2 sm:justify-end">
+                <Button type="button" variant="outline" @click="isEditOpen = false">
+                  Отмена
+                </Button>
+                <Button :disabled="!canEdit || isUpdating" type="submit">
+                  {{ isUpdating ? 'Сохраняем...' : 'Сохранить' }}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
     </section>
   </AppLayout>
 </template>

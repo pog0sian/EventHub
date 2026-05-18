@@ -1,4 +1,4 @@
-export type PointTransactionType = 'ACCRUAL' | 'SPEND'
+export type PointTransactionType = 'EVENT_ATTENDANCE' | 'REWARD_PURCHASE' | 'MANUAL_ADJUSTMENT'
 
 export interface PointBalanceResponse {
     balance: number

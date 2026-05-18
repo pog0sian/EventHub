@@ -1,5 +1,6 @@
 package ru.eventhub.reward.dto
 
+import java.io.Serializable
 import java.time.OffsetDateTime
 
 data class RewardResponse(
@@ -11,4 +12,4 @@ data class RewardResponse(
     val active: Boolean,
     val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime,
-)
+) : Serializable

@@ -1,5 +1,5 @@
 export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
-export type EventRegistrationStatus = 'REGISTERED' | 'CANCELLED' | 'ATTENDED'
+export type EventRegistrationStatus = 'REGISTERED' | 'CANCELLED'
 
 export interface EventResponse {
     id: number

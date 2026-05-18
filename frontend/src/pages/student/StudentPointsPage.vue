@@ -19,8 +19,9 @@ const activeTab = ref<'ALL' | PointTransactionType>('ALL')
 const transactions = ref<PointTransactionResponse[]>([])
 
 const typeLabels: Record<PointTransactionType, string> = {
-  ACCRUAL: 'Начисление',
-  SPEND: 'Списание',
+  EVENT_ATTENDANCE: 'Начисление за посещение',
+  REWARD_PURCHASE: 'Покупка награды',
+  MANUAL_ADJUSTMENT: 'Корректировка',
 }
 
 const filteredTransactions = computed(() => {
@@ -93,11 +94,14 @@ onMounted(loadPoints)
               <TabsTrigger value="ALL">
                 Все
               </TabsTrigger>
-              <TabsTrigger value="ACCRUAL">
-                Начисления
+              <TabsTrigger value="EVENT_ATTENDANCE">
+                Посещения
               </TabsTrigger>
-              <TabsTrigger value="SPEND">
-                Списания
+              <TabsTrigger value="REWARD_PURCHASE">
+                Покупки
+              </TabsTrigger>
+              <TabsTrigger value="MANUAL_ADJUSTMENT">
+                Корректировки
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -116,14 +120,14 @@ onMounted(loadPoints)
             <CardHeader class="pb-2">
               <CardTitle class="flex items-center justify-between gap-3 text-base">
                 <span class="flex min-w-0 items-center gap-2">
-                  <ArrowUpCircle v-if="transaction.type === 'ACCRUAL'" class="size-5 text-emerald-600" />
+                  <ArrowUpCircle v-if="transaction.amount > 0" class="size-5 text-emerald-600" />
                   <ArrowDownCircle v-else class="size-5 text-destructive" />
                   <span class="truncate">
                     {{ transaction.description || typeLabels[transaction.type] }}
                   </span>
                 </span>
 
-                <Badge :variant="transaction.type === 'ACCRUAL' ? 'default' : 'secondary'">
+                <Badge :variant="transaction.amount > 0 ? 'default' : 'secondary'">
                   {{ transaction.amount > 0 ? '+' : '' }}{{ transaction.amount }}
                 </Badge>
               </CardTitle>

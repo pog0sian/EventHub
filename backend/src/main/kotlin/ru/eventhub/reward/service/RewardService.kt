@@ -9,11 +9,14 @@ import ru.eventhub.reward.dto.toResponse
 import ru.eventhub.reward.entity.RewardEntity
 import ru.eventhub.reward.repository.RewardRepository
 import ru.eventhub.reward.dto.UpdateRewardRequest
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.Cacheable
 
 @Service
 class RewardService(
     private val rewardRepository: RewardRepository,
 ) {
+    @CacheEvict(cacheNames = ["activeRewards"], allEntries = true)
     @Transactional
     fun create(request: CreateRewardRequest): RewardResponse {
         val reward = rewardRepository.save(
@@ -28,6 +31,7 @@ class RewardService(
         return reward.toResponse()
     }
 
+    @CacheEvict(cacheNames = ["activeRewards"], allEntries = true)
     @Transactional
     fun update(
         id: Long,
@@ -44,6 +48,7 @@ class RewardService(
         return reward.toResponse()
     }
 
+    @CacheEvict(cacheNames = ["activeRewards"], allEntries = true)
     @Transactional
     fun deactivate(id: Long): RewardResponse {
         val reward = findEntityById(id)
@@ -52,6 +57,7 @@ class RewardService(
         return reward.toResponse()
     }
 
+    @Cacheable(cacheNames = ["activeRewards"])
     @Transactional(readOnly = true)
     fun getActiveRewards(): List<RewardResponse> {
         return rewardRepository.findAllByActiveTrue()
@@ -62,6 +68,11 @@ class RewardService(
     fun getAll(): List<RewardResponse> {
         return rewardRepository.findAll()
             .map { it.toResponse() }
+    }
+
+    fun findEntityByIdForUpdate(id: Long): RewardEntity {
+        return rewardRepository.findByIdForUpdate(id)
+            ?: throw NotFoundException("Reward not found")
     }
 
     @Transactional(readOnly = true)

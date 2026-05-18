@@ -25,7 +25,7 @@ class EventRegistrationService(
         studentUserId: Long,
         eventId: Long,
     ): EventRegistrationResponse {
-        val event = eventService.findEntityById(eventId)
+        val event = eventService.findEntityByIdForUpdate(eventId)
 
         if (event.status != EventStatus.PUBLISHED) {
             throw BadRequestException("Only published events are available for registration")

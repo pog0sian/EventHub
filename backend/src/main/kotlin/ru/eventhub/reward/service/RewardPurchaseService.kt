@@ -11,6 +11,7 @@ import ru.eventhub.reward.entity.RewardPurchaseEntity
 import ru.eventhub.reward.model.RewardPurchaseStatus
 import ru.eventhub.reward.repository.RewardPurchaseRepository
 import ru.eventhub.user.service.UserService
+import org.springframework.cache.annotation.CacheEvict
 
 @Service
 class RewardPurchaseService(
@@ -19,13 +20,14 @@ class RewardPurchaseService(
     private val pointService: PointService,
     private val userService: UserService,
 ) {
+    @CacheEvict(cacheNames = ["activeRewards"], allEntries = true)
     @Transactional
     fun purchaseReward(
         studentUserId: Long,
         rewardId: Long,
     ): RewardPurchaseResponse {
         val user = userService.findEntityById(studentUserId)
-        val reward = rewardService.findEntityById(rewardId)
+        val reward = rewardService.findEntityByIdForUpdate(rewardId)
 
         if (!reward.active) {
             throw BadRequestException("Reward is not active")

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { toast } from 'vue-sonner'
-import { Mail, Plus, Search, Store, UserPlus } from 'lucide-vue-next'
+import { Mail, Pencil, Plus, Search, Store, UserPlus } from 'lucide-vue-next'
 
 import {
   assignAdminOrganizationManager,
@@ -10,6 +10,7 @@ import {
   getAdminOrganizationManagers,
   getAdminOrganizations,
   removeAdminOrganizationManager,
+  updateAdminOrganization,
 } from '@/entities/organization/api'
 import type {
   OrganizationManagerDetailsResponse,
@@ -55,10 +56,13 @@ import {
 
 const isLoading = ref(true)
 const isCreating = ref(false)
+const isUpdating = ref(false)
 const isManagersOpen = ref(false)
 const isCreateOpen = ref(false)
+const isEditOpen = ref(false)
 const pendingOrganizationId = ref<number | null>(null)
 const selectedOrganization = ref<OrganizationResponse | null>(null)
+const selectedEditOrganization = ref<OrganizationResponse | null>(null)
 const selectedUserId = ref<string>('')
 const search = ref('')
 
@@ -85,6 +89,13 @@ const form = reactive({
   contactEmail: '',
 })
 
+const editForm = reactive({
+  name: '',
+  description: '',
+  contactEmail: '',
+  active: 'true',
+})
+
 const filteredOrganizations = computed(() => {
   const query = search.value.trim().toLowerCase()
 
@@ -102,10 +113,24 @@ const filteredOrganizations = computed(() => {
 const enabledUsers = computed(() => users.value.filter((user) => user.enabled))
 const canCreate = computed(() => form.name.trim().length > 0)
 
+const canEdit = computed(() => (
+    selectedEditOrganization.value !== null
+    && editForm.name.trim().length > 0
+))
+
 function resetForm(): void {
   form.name = ''
   form.description = ''
   form.contactEmail = ''
+}
+
+function openEditDialog(organization: OrganizationResponse): void {
+  selectedEditOrganization.value = organization
+  editForm.name = organization.name
+  editForm.description = organization.description ?? ''
+  editForm.contactEmail = organization.contactEmail ?? ''
+  editForm.active = String(organization.active)
+  isEditOpen.value = true
 }
 
 async function loadPage(): Promise<void> {
@@ -152,6 +177,36 @@ async function createOrganization(): Promise<void> {
     })
   } finally {
     isCreating.value = false
+  }
+}
+
+async function updateOrganization(): Promise<void> {
+  const organization = selectedEditOrganization.value
+
+  if (!organization || !canEdit.value || isUpdating.value) {
+    return
+  }
+
+  isUpdating.value = true
+
+  try {
+    await updateAdminOrganization(organization.id, {
+      name: editForm.name.trim(),
+      description: editForm.description.trim() || null,
+      contactEmail: editForm.contactEmail.trim() || null,
+      active: editForm.active === 'true',
+    })
+
+    toast.success('Организация обновлена')
+    isEditOpen.value = false
+    selectedEditOrganization.value = null
+    await loadPage()
+  } catch (error) {
+    toast.error('Не удалось обновить организацию', {
+      description: getApiErrorMessage(error),
+    })
+  } finally {
+    isUpdating.value = false
   }
 }
 
@@ -339,6 +394,11 @@ onMounted(loadPage)
                 Менеджеры
               </Button>
 
+              <Button size="sm" variant="outline" @click="openEditDialog(organization)">
+                <Pencil class="mr-2 size-4" />
+                Редактировать
+              </Button>
+
               <Button
                   v-if="organization.active"
                   :disabled="pendingOrganizationId === organization.id"
@@ -352,6 +412,64 @@ onMounted(loadPage)
           </CardContent>
         </Card>
       </div>
+
+      <Dialog v-model:open="isEditOpen">
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать организацию</DialogTitle>
+            <DialogDescription>
+              Измените данные организации и ее активность.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form class="space-y-4" @submit.prevent="updateOrganization">
+            <div class="space-y-2">
+              <Label for="edit-organization-name">Название</Label>
+              <Input id="edit-organization-name" v-model="editForm.name" />
+            </div>
+
+            <div class="space-y-2">
+              <Label for="edit-organization-email">Контактный email</Label>
+              <Input id="edit-organization-email" v-model="editForm.contactEmail" type="email" />
+            </div>
+
+            <div class="space-y-2">
+              <Label for="edit-organization-description">Описание</Label>
+              <Textarea
+                  id="edit-organization-description"
+                  v-model="editForm.description"
+                  class="min-h-24 resize-none"
+              />
+            </div>
+
+            <div class="space-y-2">
+              <Label for="edit-organization-active">Статус</Label>
+              <Select v-model="editForm.active">
+                <SelectTrigger id="edit-organization-active">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">
+                    Активна
+                  </SelectItem>
+                  <SelectItem value="false">
+                    Неактивна
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div class="flex justify-end gap-2 border-t pt-4">
+              <Button type="button" variant="outline" @click="isEditOpen = false">
+                Отмена
+              </Button>
+              <Button :disabled="!canEdit || isUpdating" type="submit">
+                {{ isUpdating ? 'Сохраняем...' : 'Сохранить' }}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog v-model:open="isManagersOpen">
         <DialogContent class="sm:max-w-2xl">

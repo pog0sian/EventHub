@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { CheckCircle2, Gift, Search } from 'lucide-vue-next'
 
@@ -17,12 +17,35 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const isLoading = ref(true)
 const pendingPurchaseId = ref<number | null>(null)
 const search = ref('')
 const activeTab = ref<'ALL' | RewardPurchaseStatus>('REQUESTED')
 const purchases = ref<RewardPurchaseResponse[]>([])
+
+const issueDialog = reactive<{
+  open: boolean
+  purchase: RewardPurchaseResponse | null
+}>({
+  open: false,
+  purchase: null,
+})
+
+function openIssueDialog(purchase: RewardPurchaseResponse): void {
+  issueDialog.purchase = purchase
+  issueDialog.open = true
+}
 
 const statusLabels: Record<RewardPurchaseStatus, string> = {
   REQUESTED: 'Ожидает',
@@ -64,12 +87,20 @@ async function loadPurchases(): Promise<void> {
   }
 }
 
-async function issuePurchase(id: number): Promise<void> {
-  pendingPurchaseId.value = id
+async function issuePurchase(): Promise<void> {
+  const purchase = issueDialog.purchase
+
+  if (!purchase) {
+    return
+  }
+
+  pendingPurchaseId.value = purchase.id
 
   try {
-    await issueAdminRewardPurchase(id)
+    await issueAdminRewardPurchase(purchase.id)
     toast.success('Награда выдана')
+    issueDialog.open = false
+    issueDialog.purchase = null
     await loadPurchases()
   } catch (error) {
     toast.error('Не удалось выдать награду', {
@@ -158,7 +189,7 @@ onMounted(loadPurchases)
                 v-if="purchase.status === 'REQUESTED'"
                 :disabled="pendingPurchaseId === purchase.id"
                 size="sm"
-                @click="issuePurchase(purchase.id)"
+                @click="openIssueDialog(purchase)"
             >
               <CheckCircle2 class="mr-2 size-4" />
               {{ pendingPurchaseId === purchase.id ? 'Выдаем...' : 'Выдать' }}
@@ -166,6 +197,30 @@ onMounted(loadPurchases)
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog v-model:open="issueDialog.open">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Выдать награду?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Заявка на {{ issueDialog.purchase?.rewardTitle }} будет отмечена как выданная.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction
+                :disabled="issueDialog.purchase ? pendingPurchaseId === issueDialog.purchase.id : false"
+                @click="issuePurchase"
+            >
+              Выдать
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </section>
   </AppLayout>
 </template>

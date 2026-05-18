@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { toast } from 'vue-sonner'
-import { Gift, Plus, Search } from 'lucide-vue-next'
+import { Gift, Pencil, Plus, Search } from 'lucide-vue-next'
 
 import {
   createAdminReward,
   deactivateAdminReward,
   getAdminRewards,
+  updateAdminReward
 } from '@/entities/reward/api'
 import type { RewardResponse } from '@/entities/reward/types'
 import { getApiErrorMessage } from '@/shared/api/client'
@@ -25,21 +26,62 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const isLoading = ref(true)
 const isCreateOpen = ref(false)
+const isEditOpen = ref(false)
 const isCreating = ref(false)
+const isUpdating = ref(false)
 const pendingRewardId = ref<number | null>(null)
+const selectedReward = ref<RewardResponse | null>(null)
 const search = ref('')
 const rewards = ref<RewardResponse[]>([])
+
+const deactivateDialog = reactive<{
+  open: boolean
+  reward: RewardResponse | null
+}>({
+  open: false,
+  reward: null,
+})
+
+function openDeactivateDialog(reward: RewardResponse): void {
+  deactivateDialog.reward = reward
+  deactivateDialog.open = true
+}
 
 const form = reactive({
   title: '',
   description: '',
   cost: 100,
   stock: 1,
+})
+
+const editForm = reactive({
+  title: '',
+  description: '',
+  cost: 100,
+  stock: 1,
+  active: 'true',
 })
 
 const filteredRewards = computed(() => {
@@ -61,11 +103,28 @@ const canCreate = computed(() => (
     && Number(form.stock) >= 0
 ))
 
+const canEdit = computed(() => (
+    selectedReward.value !== null
+    && editForm.title.trim().length > 0
+    && Number(editForm.cost) >= 1
+    && Number(editForm.stock) >= 0
+))
+
 function resetForm(): void {
   form.title = ''
   form.description = ''
   form.cost = 100
   form.stock = 1
+}
+
+function openEditDialog(reward: RewardResponse): void {
+  selectedReward.value = reward
+  editForm.title = reward.title
+  editForm.description = reward.description ?? ''
+  editForm.cost = reward.cost
+  editForm.stock = reward.stock
+  editForm.active = String(reward.active)
+  isEditOpen.value = true
 }
 
 async function loadRewards(): Promise<void> {
@@ -110,12 +169,51 @@ async function createReward(): Promise<void> {
   }
 }
 
-async function deactivateReward(id: number): Promise<void> {
-  pendingRewardId.value = id
+async function updateReward(): Promise<void> {
+  const reward = selectedReward.value
+
+  if (!reward || !canEdit.value || isUpdating.value) {
+    return
+  }
+
+  isUpdating.value = true
 
   try {
-    await deactivateAdminReward(id)
+    await updateAdminReward(reward.id, {
+      title: editForm.title.trim(),
+      description: editForm.description.trim() || null,
+      cost: Number(editForm.cost),
+      stock: Number(editForm.stock),
+      active: editForm.active === 'true',
+    })
+
+    toast.success('Награда обновлена')
+    isEditOpen.value = false
+    selectedReward.value = null
+    await loadRewards()
+  } catch (error) {
+    toast.error('Не удалось обновить награду', {
+      description: getApiErrorMessage(error),
+    })
+  } finally {
+    isUpdating.value = false
+  }
+}
+
+async function deactivateReward(): Promise<void> {
+  const reward = deactivateDialog.reward
+
+  if (!reward) {
+    return
+  }
+
+  pendingRewardId.value = reward.id
+
+  try {
+    await deactivateAdminReward(reward.id)
     toast.success('Награда деактивирована')
+    deactivateDialog.open = false
+    deactivateDialog.reward = null
     await loadRewards()
   } catch (error) {
     toast.error('Не удалось деактивировать награду', {
@@ -237,13 +335,22 @@ onMounted(loadRewards)
                 <p>Создана: {{ formatDateTime(reward.createdAt) }}</p>
               </div>
 
-              <div class="mt-auto pt-2">
+              <div class="mt-auto flex flex-wrap gap-2 pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  @click="openEditDialog(reward)"
+                >
+                  <Pencil class="mr-2 size-4" />
+                  Редактировать
+                </Button>
+
                 <Button
                     v-if="reward.active"
                     :disabled="pendingRewardId === reward.id"
                     size="sm"
                     variant="outline"
-                    @click="deactivateReward(reward.id)"
+                    @click="openDeactivateDialog(reward)"
                 >
                   Деактивировать
                 </Button>
@@ -252,6 +359,91 @@ onMounted(loadRewards)
           </div>
         </Card>
       </div>
+
+      <Dialog v-model:open="isEditOpen">
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать награду</DialogTitle>
+            <DialogDescription>
+              Изменения сразу отразятся в каталоге студента.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form class="space-y-4" @submit.prevent="updateReward">
+            <div class="space-y-2">
+              <Label for="edit-title">Название</Label>
+              <Input id="edit-title" v-model="editForm.title" />
+            </div>
+
+            <div class="space-y-2">
+              <Label for="edit-description">Описание</Label>
+              <Textarea id="edit-description" v-model="editForm.description" class="min-h-24 resize-none" />
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="space-y-2">
+                <Label for="edit-cost">Стоимость</Label>
+                <Input id="edit-cost" v-model.number="editForm.cost" min="1" type="number" />
+              </div>
+
+              <div class="space-y-2">
+                <Label for="edit-stock">Остаток</Label>
+                <Input id="edit-stock" v-model.number="editForm.stock" min="0" type="number" />
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <Label for="edit-active">Статус</Label>
+              <Select v-model="editForm.active">
+                <SelectTrigger id="edit-active">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">
+                    Активна
+                  </SelectItem>
+                  <SelectItem value="false">
+                    Неактивна
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div class="flex justify-end gap-2 border-t pt-4">
+              <Button type="button" variant="outline" @click="isEditOpen = false">
+                Отмена
+              </Button>
+              <Button :disabled="!canEdit || isUpdating" type="submit">
+                {{ isUpdating ? 'Сохраняем...' : 'Сохранить' }}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog v-model:open="deactivateDialog.open">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Деактивировать награду?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Награда {{ deactivateDialog.reward?.title }} больше не будет доступна студентам для покупки.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction
+                :disabled="deactivateDialog.reward ? pendingRewardId === deactivateDialog.reward.id : false"
+                @click="deactivateReward"
+            >
+              Деактивировать
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </section>
   </AppLayout>
 </template>

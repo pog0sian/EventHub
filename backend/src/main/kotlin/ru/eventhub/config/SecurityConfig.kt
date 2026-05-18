@@ -36,6 +36,7 @@ class SecurityConfig(
                     "/v3/api-docs/**",
                     "/v3/api-docs.yaml",
                 ).permitAll()
+                .requestMatchers("/actuator/health").permitAll()
                 .anyRequest().authenticated()
         }
 
