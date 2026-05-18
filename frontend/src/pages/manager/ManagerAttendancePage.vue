@@ -52,7 +52,7 @@ const manageableEvents = computed(() => events.value.filter((event) => (
 )))
 
 const registeredStudents = computed(() => registrations.value.filter((registration) => (
-    registration.status === 'REGISTERED' || registration.status === 'ATTENDED'
+    registration.status === 'REGISTERED'
 )))
 
 async function loadOrganizationsAndEvents(): Promise<void> {

@@ -4,21 +4,17 @@ import org.springframework.boot.test.util.TestPropertyValues
 import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.ConfigurableApplicationContext
 import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 
-@Testcontainers
 abstract class PostgresTestContainer {
     companion object {
-        @Container
-        val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16-alpine")
+        private val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16-alpine")
             .withDatabaseName("eventhub_test")
             .withUsername("eventhub")
             .withPassword("eventhub")
-    }
 
-    init {
-        postgres.start()
+        init {
+            postgres.start()
+        }
     }
 
     class Initializer : ApplicationContextInitializer<ConfigurableApplicationContext> {

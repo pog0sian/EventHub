@@ -1,19 +1,18 @@
 services:
-
   postgres:
     image: postgres:16-alpine
     container_name: eventhub-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: eventhub
-      POSTGRES_USER: eventhub
-      POSTGRES_PASSWORD: eventhub
+      POSTGRES_DB: ${POSTGRES_DB:-eventhub}
+      POSTGRES_USER: ${POSTGRES_USER:-eventhub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eventhub}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - eventhub-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U eventhub -d eventhub"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,12 +22,52 @@ services:
     container_name: eventhub-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: eventhub-backend
+    restart: unless-stopped
+    environment:
+      DB_URL: ${DB_URL:-jdbc:postgresql://postgres:5432/eventhub}
+      DB_USERNAME: ${DB_USERNAME:-eventhub}
+      DB_PASSWORD: ${DB_PASSWORD:-eventhub}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      JWT_SECRET: ${JWT_SECRET:-eventhub-docker-development-secret-key-change-me-minimum-32-characters}
+      JWT_ACCESS_TTL_MINUTES: ${JWT_ACCESS_TTL_MINUTES:-60}
+      JWT_REFRESH_TTL_DAYS: ${JWT_REFRESH_TTL_DAYS:-30}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      EVENT_STATUS_SCHEDULER_DELAY_MS: ${EVENT_STATUS_SCHEDULER_DELAY_MS:-60000}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: eventhub-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   eventhub-postgres-data:
