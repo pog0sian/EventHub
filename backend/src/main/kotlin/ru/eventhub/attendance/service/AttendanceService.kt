@@ -52,10 +52,16 @@ class AttendanceService(
         val student = userService.findEntityById(request.userId)
         val manager = userService.findEntityById(managerUserId)
 
-        val attendance = attendanceRepository.findByEventIdAndUserId(
+        val existingAttendance = attendanceRepository.findByEventIdAndUserId(
             eventId = eventId,
             userId = request.userId,
-        )?.apply {
+        )
+
+        if (existingAttendance?.attended == true && !request.attended) {
+            throw BadRequestException("Confirmed attendance cannot be reverted")
+        }
+
+        val attendance = existingAttendance?.apply {
             attended = request.attended
             markedBy = manager
             markedAt = OffsetDateTime.now()

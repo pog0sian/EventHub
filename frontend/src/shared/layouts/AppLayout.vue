@@ -127,11 +127,11 @@ async function logout(): Promise<void> {
       <SidebarHeader>
         <RouterLink to="/" class="flex items-center gap-2 px-2 py-1.5">
           <div class="flex size-8 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground">
-            EH
+            ИХ
           </div>
           <div class="min-w-0">
             <div class="truncate text-sm font-semibold">
-              EventHub
+              ИвентХаб
             </div>
             <div class="truncate text-xs text-muted-foreground">
               {{ activeRoleLabel }}

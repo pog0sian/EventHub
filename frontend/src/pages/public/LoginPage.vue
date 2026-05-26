@@ -68,7 +68,7 @@ async function onSubmit(): Promise<void> {
 
     toast.error(message === 'User account is disabled' ? 'Аккаунт отключен' : 'Не удалось войти', {
       description: message === 'User account is disabled'
-          ? 'Обратитесь к администратору EventHub, чтобы восстановить доступ.'
+          ? 'Обратитесь к администратору ИвентХаб, чтобы восстановить доступ.'
           : message,
     })
   }
@@ -83,7 +83,7 @@ async function onSubmit(): Promise<void> {
           Вход
         </CardTitle>
         <CardDescription>
-          Введите email и пароль от аккаунта EventHub.
+          Введите email и пароль от аккаунта ИвентХаб.
         </CardDescription>
       </CardHeader>
 

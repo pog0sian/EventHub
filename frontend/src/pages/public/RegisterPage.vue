@@ -86,18 +86,18 @@ async function onSubmit(): Promise<void> {
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="space-y-2">
               <Label for="lastName">Фамилия</Label>
-              <Input id="lastName" v-model="form.lastName" autocomplete="family-name" />
+              <Input id="lastName" v-model="form.lastName" autocomplete="family-name" placeholder="Иванов" />
             </div>
 
             <div class="space-y-2">
               <Label for="firstName">Имя</Label>
-              <Input id="firstName" v-model="form.firstName" autocomplete="given-name" />
+              <Input id="firstName" v-model="form.firstName" autocomplete="given-name" placeholder="Иван" />
             </div>
           </div>
 
           <div class="space-y-2">
             <Label for="patronymic">Отчество</Label>
-            <Input id="patronymic" v-model="form.patronymic" autocomplete="additional-name" />
+            <Input id="patronymic" v-model="form.patronymic" autocomplete="additional-name" placeholder="Иванович" />
           </div>
 
           <div class="space-y-2">

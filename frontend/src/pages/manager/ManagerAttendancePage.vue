@@ -47,6 +47,10 @@ const attendanceByUserId = computed(() => {
   return map
 })
 
+function isConfirmedAttendance(userId: number): boolean {
+  return attendanceByUserId.value.get(userId)?.attended === true
+}
+
 const manageableEvents = computed(() => events.value.filter((event) => (
     event.status === 'PUBLISHED' || event.status === 'COMPLETED'
 )))
@@ -286,7 +290,7 @@ onMounted(loadOrganizationsAndEvents)
                 </Button>
 
                 <Button
-                    :disabled="pendingUserId === registration.userId"
+                    :disabled="pendingUserId === registration.userId || isConfirmedAttendance(registration.userId)"
                     size="sm"
                     variant="outline"
                     @click="markAttendance(registration.userId, false)"
@@ -295,6 +299,14 @@ onMounted(loadOrganizationsAndEvents)
                   Не был
                 </Button>
               </div>
+
+              <p
+                  v-if="isConfirmedAttendance(registration.userId)"
+                  class="text-xs text-muted-foreground"
+              >
+                Подтвержденное посещение нельзя отменить после начисления баллов.
+              </p>
+
             </div>
           </div>
         </CardContent>

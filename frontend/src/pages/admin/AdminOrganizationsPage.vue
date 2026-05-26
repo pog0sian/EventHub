@@ -78,9 +78,22 @@ const deactivateDialog = reactive<{
   organization: null,
 })
 
+const removeManagerDialog = reactive<{
+  open: boolean
+  manager: OrganizationManagerResponse | null
+}>({
+  open: false,
+  manager: null,
+})
+
 function openDeactivateDialog(organization: OrganizationResponse): void {
   deactivateDialog.organization = organization
   deactivateDialog.open = true
+}
+
+function openRemoveManagerDialog(manager: OrganizationManagerResponse): void {
+  removeManagerDialog.manager = manager
+  removeManagerDialog.open = true
 }
 
 const form = reactive({
@@ -268,14 +281,18 @@ async function assignManager(): Promise<void> {
   }
 }
 
-async function removeManager(userId: number): Promise<void> {
-  if (!selectedOrganization.value) {
+async function removeManager(): Promise<void> {
+  const manager = removeManagerDialog.manager
+
+  if (!selectedOrganization.value || !manager) {
     return
   }
 
   try {
-    await removeAdminOrganizationManager(selectedOrganization.value.id, userId)
+    await removeAdminOrganizationManager(selectedOrganization.value.id, manager.userId)
     toast.success('Менеджер снят')
+    removeManagerDialog.open = false
+    removeManagerDialog.manager = null
     managers.value = await getAdminOrganizationManagers(selectedOrganization.value.id)
   } catch (error) {
     toast.error('Не удалось снять менеджера', {
@@ -528,7 +545,7 @@ onMounted(loadPage)
                       v-if="manager.active"
                       size="sm"
                       variant="outline"
-                      @click="removeManager(manager.userId)"
+                      @click="openRemoveManagerDialog(manager)"
                   >
                     Снять
                   </Button>
@@ -557,6 +574,27 @@ onMounted(loadPage)
                 @click="deactivateOrganization"
             >
               Деактивировать
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog v-model:open="removeManagerDialog.open">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Снять менеджера?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Пользователь {{ removeManagerDialog.manager?.userEmail }} потеряет права менеджера организации
+              {{ selectedOrganization?.name }}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction @click="removeManager">
+              Снять менеджера
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

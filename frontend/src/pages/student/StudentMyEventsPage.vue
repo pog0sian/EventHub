@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { CalendarCheck, Search } from 'lucide-vue-next'
 
@@ -14,12 +14,29 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const isLoading = ref(true)
 const pendingEventId = ref<number | null>(null)
 const search = ref('')
 const activeTab = ref<'ALL' | EventRegistrationStatus>('ALL')
 const registrations = ref<EventRegistrationResponse[]>([])
+const cancelDialog = reactive<{
+  open: boolean
+  registration: EventRegistrationResponse | null
+}>({
+  open: false,
+  registration: null,
+})
 
 const statusLabels: Record<EventRegistrationStatus, string> = {
   REGISTERED: 'Записан',
@@ -59,12 +76,25 @@ async function loadRegistrations(): Promise<void> {
   }
 }
 
-async function cancelRegistration(eventId: number): Promise<void> {
-  pendingEventId.value = eventId
+function openCancelDialog(registration: EventRegistrationResponse): void {
+  cancelDialog.registration = registration
+  cancelDialog.open = true
+}
+
+async function cancelRegistration(): Promise<void> {
+  const registration = cancelDialog.registration
+
+  if (!registration) {
+    return
+  }
+
+  pendingEventId.value = registration.eventId
 
   try {
-    await cancelEventRegistration(eventId)
+    await cancelEventRegistration(registration.eventId)
     toast.success('Запись отменена')
+    cancelDialog.open = false
+    cancelDialog.registration = null
     await loadRegistrations()
   } catch (error) {
     toast.error('Не удалось отменить запись', {
@@ -142,13 +172,38 @@ onMounted(loadRegistrations)
                 v-if="registration.status === 'REGISTERED'"
                 :disabled="pendingEventId === registration.eventId"
                 variant="outline"
-                @click="cancelRegistration(registration.eventId)"
+                @click="openCancelDialog(registration)"
             >
               {{ pendingEventId === registration.eventId ? 'Отмена...' : 'Отменить запись' }}
             </Button>
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog v-model:open="cancelDialog.open">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Отменить запись?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Запись на мероприятие {{ cancelDialog.registration?.eventTitle }} будет отменена.
+              Если количество мест ограничено, место станет доступно другим студентам.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              Не отменять
+            </AlertDialogCancel>
+            <AlertDialogAction
+                :disabled="cancelDialog.registration ? pendingEventId === cancelDialog.registration.eventId : false"
+                @click="cancelRegistration"
+            >
+              Отменить запись
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </section>
   </AppLayout>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { Gift, History, WalletCards } from 'lucide-vue-next'
 
@@ -14,12 +14,29 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const isLoading = ref(true)
 const pendingRewardId = ref<number | null>(null)
 const balance = ref(0)
 const rewards = ref<RewardResponse[]>([])
 const purchases = ref<RewardPurchaseResponse[]>([])
+const purchaseDialog = reactive<{
+  open: boolean
+  reward: RewardResponse | null
+}>({
+  open: false,
+  reward: null,
+})
 
 const activeRewards = computed(() => rewards.value.filter((reward) => reward.active))
 
@@ -61,12 +78,25 @@ function canBuy(reward: RewardResponse): boolean {
   return reward.active && reward.stock > 0 && balance.value >= reward.cost
 }
 
-async function buyReward(reward: RewardResponse): Promise<void> {
+function openPurchaseDialog(reward: RewardResponse): void {
+  purchaseDialog.reward = reward
+  purchaseDialog.open = true
+}
+
+async function buyReward(): Promise<void> {
+  const reward = purchaseDialog.reward
+
+  if (!reward) {
+    return
+  }
+
   pendingRewardId.value = reward.id
 
   try {
     await purchaseReward(reward.id)
     toast.success('Заявка на награду создана')
+    purchaseDialog.open = false
+    purchaseDialog.reward = null
     await loadRewards()
   } catch (error) {
     toast.error('Не удалось купить награду', {
@@ -158,7 +188,7 @@ onMounted(loadRewards)
 
                     <Button
                         :disabled="!canBuy(reward) || pendingRewardId === reward.id"
-                        @click="buyReward(reward)"
+                        @click="openPurchaseDialog(reward)"
                     >
                       <span v-if="pendingRewardId === reward.id">Покупка...</span>
                       <span v-else-if="reward.stock <= 0">Нет в наличии</span>
@@ -203,6 +233,31 @@ onMounted(loadRewards)
           </div>
         </TabsContent>
       </Tabs>
+
+      <AlertDialog v-model:open="purchaseDialog.open">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Купить награду?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Будет создана заявка на награду {{ purchaseDialog.reward?.title }}.
+              Стоимость: {{ purchaseDialog.reward?.cost }} баллов.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction
+                :disabled="purchaseDialog.reward ? pendingRewardId === purchaseDialog.reward.id : false"
+                @click="buyReward"
+            >
+              Купить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </section>
   </AppLayout>
 </template>

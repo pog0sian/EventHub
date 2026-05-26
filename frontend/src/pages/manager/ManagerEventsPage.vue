@@ -39,6 +39,16 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const isLoading = ref(true)
 const isCreateOpen = ref(false)
@@ -47,6 +57,15 @@ const isCreating = ref(false)
 const isUpdating = ref(false)
 const pendingEventId = ref<number | null>(null)
 const selectedEvent = ref<EventResponse | null>(null)
+const actionDialog = reactive<{
+  open: boolean
+  event: EventResponse | null
+  action: 'publish' | 'cancel' | 'complete' | null
+}>({
+  open: false,
+  event: null,
+  action: null,
+})
 const search = ref('')
 const selectedOrganizationId = ref<string>('')
 const organizations = ref<OrganizationResponse[]>([])
@@ -85,6 +104,24 @@ const statusVariants: Record<EventResponse['status'], 'default' | 'secondary' | 
   PUBLISHED: 'default',
   CANCELLED: 'destructive',
   COMPLETED: 'outline',
+}
+
+const actionLabels: Record<'publish' | 'cancel' | 'complete', string> = {
+  publish: 'Опубликовать',
+  cancel: 'Отменить',
+  complete: 'Завершить',
+}
+
+const actionDialogTitles: Record<'publish' | 'cancel' | 'complete', string> = {
+  publish: 'Опубликовать мероприятие?',
+  cancel: 'Отменить мероприятие?',
+  complete: 'Завершить мероприятие?',
+}
+
+const actionDialogDescriptions: Record<'publish' | 'cancel' | 'complete', string> = {
+  publish: 'Мероприятие станет видимым студентам и доступным для записи.',
+  cancel: 'Мероприятие будет отменено и станет недоступным для записи.',
+  complete: 'Мероприятие будет завершено. После этого его нельзя будет отменить или редактировать как активное.',
 }
 
 const filteredEvents = computed(() => {
@@ -305,25 +342,41 @@ async function updateEvent(): Promise<void> {
   }
 }
 
-async function runEventAction(eventId: number, action: 'publish' | 'cancel' | 'complete'): Promise<void> {
-  pendingEventId.value = eventId
+function openActionDialog(event: EventResponse, action: 'publish' | 'cancel' | 'complete'): void {
+  actionDialog.event = event
+  actionDialog.action = action
+  actionDialog.open = true
+}
+
+async function runEventAction(): Promise<void> {
+  const event = actionDialog.event
+  const action = actionDialog.action
+
+  if (!event || !action) {
+    return
+  }
+
+  pendingEventId.value = event.id
 
   try {
     if (action === 'publish') {
-      await publishManagerEvent(eventId)
+      await publishManagerEvent(event.id)
       toast.success('Мероприятие опубликовано')
     }
 
     if (action === 'cancel') {
-      await cancelManagerEvent(eventId)
+      await cancelManagerEvent(event.id)
       toast.success('Мероприятие отменено')
     }
 
     if (action === 'complete') {
-      await completeManagerEvent(eventId)
+      await completeManagerEvent(event.id)
       toast.success('Мероприятие завершено')
     }
 
+    actionDialog.open = false
+    actionDialog.event = null
+    actionDialog.action = null
     await loadEvents()
   } catch (error) {
     toast.error('Не удалось выполнить действие', {
@@ -563,7 +616,7 @@ onMounted(loadEvents)
                     v-if="event.status === 'DRAFT'"
                     :disabled="pendingEventId === event.id"
                     size="sm"
-                    @click="runEventAction(event.id, 'publish')"
+                    @click="openActionDialog(event, 'publish')"
                 >
                   Опубликовать
                 </Button>
@@ -573,7 +626,7 @@ onMounted(loadEvents)
                     :disabled="pendingEventId === event.id"
                     size="sm"
                     variant="outline"
-                    @click="runEventAction(event.id, 'cancel')"
+                    @click="openActionDialog(event, 'cancel')"
                 >
                   Отменить
                 </Button>
@@ -583,7 +636,7 @@ onMounted(loadEvents)
                     :disabled="pendingEventId === event.id"
                     size="sm"
                     variant="outline"
-                    @click="runEventAction(event.id, 'complete')"
+                    @click="openActionDialog(event, 'complete')"
                 >
                   Завершить
                 </Button>
@@ -700,6 +753,32 @@ onMounted(loadEvents)
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog v-model:open="actionDialog.open">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {{ actionDialog.action ? actionDialogTitles[actionDialog.action] : 'Подтвердить действие?' }}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {{ actionDialog.action ? actionDialogDescriptions[actionDialog.action] : '' }}
+              Мероприятие: {{ actionDialog.event?.title }}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction
+                :disabled="actionDialog.event ? pendingEventId === actionDialog.event.id : false"
+                @click="runEventAction"
+            >
+              {{ actionDialog.action ? actionLabels[actionDialog.action] : 'Подтвердить' }}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </section>
   </AppLayout>

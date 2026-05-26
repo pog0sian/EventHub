@@ -63,8 +63,8 @@ function selectRole(role: RoleName): void {
         </p>
       </div>
 
-      <div class="grid gap-4 md:grid-cols-3">
-        <Card v-for="item in availableRoles" :key="item.role" class="rounded-lg">
+      <div class="flex flex-wrap justify-center gap-4">
+        <Card v-for="item in availableRoles" :key="item.role" class="flex w-full flex-col rounded-lg sm:w-72">
           <CardHeader>
             <component :is="item.icon" class="mb-2 size-6 text-primary" />
             <CardTitle class="text-lg">
@@ -74,7 +74,7 @@ function selectRole(role: RoleName): void {
               {{ item.description }}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent class="mt-auto">
             <Button class="w-full" @click="selectRole(item.role)">
               Продолжить
             </Button>
