@@ -80,7 +80,7 @@ const deactivateDialog = reactive<{
 
 const removeManagerDialog = reactive<{
   open: boolean
-  manager: OrganizationManagerResponse | null
+  manager: OrganizationManagerDetailsResponse | null
 }>({
   open: false,
   manager: null,
@@ -91,7 +91,7 @@ function openDeactivateDialog(organization: OrganizationResponse): void {
   deactivateDialog.open = true
 }
 
-function openRemoveManagerDialog(manager: OrganizationManagerResponse): void {
+function openRemoveManagerDialog(manager: OrganizationManagerDetailsResponse): void {
   removeManagerDialog.manager = manager
   removeManagerDialog.open = true
 }
