@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - eventhub-postgres-data:/var/lib/postgresql/data
+    networks:
+      - eventhub
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - eventhub
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  backend:
+    image: ghcr.io/${GHCR_NAMESPACE:?GHCR_NAMESPACE is required}/eventhub-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      DB_URL: "jdbc:postgresql://postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}"
+      DB_USERNAME: ${POSTGRES_USER:?POSTGRES_USER is required}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_ACCESS_TTL_MINUTES: ${JWT_ACCESS_TTL_MINUTES:?JWT_ACCESS_TTL_MINUTES is required}
+      JWT_REFRESH_TTL_DAYS: ${JWT_REFRESH_TTL_DAYS:?JWT_REFRESH_TTL_DAYS is required}
+      SERVER_PORT: "8080"
+      EVENT_STATUS_SCHEDULER_DELAY_MS: ${EVENT_STATUS_SCHEDULER_DELAY_MS:?EVENT_STATUS_SCHEDULER_DELAY_MS is required}
+    networks:
+      - eventhub
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q 'UP'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  frontend:
+    image: ghcr.io/${GHCR_NAMESPACE:?GHCR_NAMESPACE is required}/eventhub-frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    networks:
+      - eventhub
+    depends_on:
+      backend:
+        condition: service_healthy
+
+networks:
+  eventhub:
+    name: eventhub
+    driver: bridge
+
+volumes:
+  eventhub-postgres-data:
+    name: eventhub-postgres-data
