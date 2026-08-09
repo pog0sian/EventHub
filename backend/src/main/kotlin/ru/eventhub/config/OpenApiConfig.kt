@@ -18,7 +18,7 @@ class OpenApiConfig {
             .info(
                 Info()
                     .title("EventHub API")
-                    .description("University event management platform API")
+                    .description("API платформы университетских мероприятий EventHub")
                     .version("v1"),
             )
             .components(

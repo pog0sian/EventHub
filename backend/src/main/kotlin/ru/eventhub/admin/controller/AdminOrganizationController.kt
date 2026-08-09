@@ -1,5 +1,7 @@
 package ru.eventhub.admin.controller
 
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
@@ -24,6 +26,10 @@ import ru.eventhub.organization.dto.OrganizationManagerDetailsResponse
 
 @RestController
 @RequestMapping("/api/admin/organizations")
+@Tag(
+    name = "Администратор: организации",
+    description = "Создание организаций, редактирование данных и назначение менеджеров",
+)
 class AdminOrganizationController(
     private val organizationService: OrganizationService,
     private val organizationManagerService: OrganizationManagerService,
@@ -31,6 +37,10 @@ class AdminOrganizationController(
 ) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(
+        summary = "Создать организацию",
+        description = "Создает новую организацию, которой позже можно назначить менеджеров.",
+    )
     fun create(
         @Valid @RequestBody request: CreateOrganizationRequest,
     ): OrganizationResponse {
@@ -39,6 +49,10 @@ class AdminOrganizationController(
     }
 
     @PutMapping("/{id}")
+    @Operation(
+        summary = "Обновить организацию",
+        description = "Изменяет название, описание, контактный email и активность организации.",
+    )
     fun update(
         @PathVariable id: Long,
         @Valid @RequestBody request: UpdateOrganizationRequest,
@@ -51,6 +65,10 @@ class AdminOrganizationController(
     }
 
     @PostMapping("/{id}/deactivate")
+    @Operation(
+        summary = "Деактивировать организацию",
+        description = "Отключает организацию для новых действий, связанных с активными мероприятиями.",
+    )
     fun deactivate(
         @PathVariable id: Long,
     ): OrganizationResponse {
@@ -59,18 +77,30 @@ class AdminOrganizationController(
     }
 
     @GetMapping
+    @Operation(
+        summary = "Список организаций",
+        description = "Возвращает все организации, включая активные и деактивированные.",
+    )
     fun getAll(): List<OrganizationResponse> {
         activeRoleGuard.requireActiveRole(RoleName.ADMIN)
         return organizationService.getAll()
     }
 
     @GetMapping("/{id}")
+    @Operation(
+        summary = "Организация по ID",
+        description = "Возвращает данные одной организации по ее идентификатору.",
+    )
     fun getById(@PathVariable id: Long): OrganizationResponse {
         activeRoleGuard.requireActiveRole(RoleName.ADMIN)
         return organizationService.getById(id)
     }
 
     @GetMapping("/{id}/managers")
+    @Operation(
+        summary = "Менеджеры организации",
+        description = "Возвращает пользователей, назначенных менеджерами выбранной организации.",
+    )
     fun getManagers(
         @PathVariable id: Long,
     ): List<OrganizationManagerDetailsResponse> {
@@ -80,6 +110,10 @@ class AdminOrganizationController(
 
     @PostMapping("/{id}/managers")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(
+        summary = "Назначить менеджера",
+        description = "Назначает пользователя менеджером организации и выдает ему роль менеджера организации.",
+    )
     fun assignManager(
         @PathVariable id: Long,
         @Valid @RequestBody request: AssignOrganizationManagerRequest,
@@ -92,6 +126,10 @@ class AdminOrganizationController(
     }
 
     @DeleteMapping("/{id}/managers/{userId}")
+    @Operation(
+        summary = "Снять менеджера",
+        description = "Снимает пользователя с роли менеджера конкретной организации.",
+    )
     fun removeManager(
         @PathVariable id: Long,
         @PathVariable userId: Long,

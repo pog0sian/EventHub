@@ -1,5 +1,7 @@
 package ru.eventhub.reward.controller
 
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
@@ -18,12 +20,20 @@ import ru.eventhub.user.model.RoleName
 
 @RestController
 @RequestMapping("/api/student/rewards")
+@Tag(
+    name = "Студент: награды",
+    description = "Каталог наград, покупка за баллы и история заявок студента",
+)
 class StudentRewardController(
     private val rewardService: RewardService,
     private val rewardPurchaseService: RewardPurchaseService,
     private val activeRoleGuard: ActiveRoleGuard,
 ) {
     @GetMapping
+    @Operation(
+        summary = "Доступные награды",
+        description = "Возвращает активные награды, которые студент может приобрести за баллы.",
+    )
     fun getActiveRewards(): List<RewardResponse> {
         activeRoleGuard.requireActiveRole(RoleName.STUDENT)
         return rewardService.getActiveRewards()
@@ -31,6 +41,10 @@ class StudentRewardController(
 
     @PostMapping("/{id}/purchase")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(
+        summary = "Купить награду",
+        description = "Создает заявку на получение награды и списывает баллы со счета студента.",
+    )
     fun purchase(
         @AuthenticationPrincipal principal: UserPrincipal,
         @PathVariable id: Long,
@@ -43,6 +57,10 @@ class StudentRewardController(
     }
 
     @GetMapping("/purchases")
+    @Operation(
+        summary = "Мои заявки на награды",
+        description = "Возвращает историю заявок текущего студента на получение наград.",
+    )
     fun getMyPurchases(
         @AuthenticationPrincipal principal: UserPrincipal,
     ): List<RewardPurchaseResponse> {

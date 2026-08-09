@@ -1,5 +1,7 @@
 package ru.eventhub.points.controller
 
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -13,11 +15,19 @@ import ru.eventhub.user.model.RoleName
 
 @RestController
 @RequestMapping("/api/student/points")
+@Tag(
+    name = "Студент: баллы",
+    description = "Баланс баллов студента и история операций начисления и списания",
+)
 class StudentPointController(
     private val pointService: PointService,
     private val activeRoleGuard: ActiveRoleGuard,
 ) {
     @GetMapping("/balance")
+    @Operation(
+        summary = "Баланс баллов",
+        description = "Возвращает текущий баланс баллов студента.",
+    )
     fun getBalance(
         @AuthenticationPrincipal principal: UserPrincipal,
     ): PointBalanceResponse {
@@ -26,6 +36,10 @@ class StudentPointController(
     }
 
     @GetMapping("/transactions")
+    @Operation(
+        summary = "История операций",
+        description = "Возвращает историю начислений и списаний баллов текущего студента.",
+    )
     fun getTransactions(
         @AuthenticationPrincipal principal: UserPrincipal,
     ): List<PointTransactionResponse> {

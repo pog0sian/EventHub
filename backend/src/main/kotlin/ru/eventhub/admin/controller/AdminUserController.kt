@@ -1,5 +1,7 @@
 package ru.eventhub.admin.controller
 
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -15,17 +17,29 @@ import ru.eventhub.user.service.UserService
 
 @RestController
 @RequestMapping("/api/admin/users")
+@Tag(
+    name = "Администратор: пользователи",
+    description = "Просмотр пользователей и управление доступом к учетным записям",
+)
 class AdminUserController(
     private val userService: UserService,
     private val activeRoleGuard: ActiveRoleGuard,
 ) {
     @GetMapping
+    @Operation(
+        summary = "Список пользователей",
+        description = "Возвращает всех зарегистрированных пользователей системы.",
+    )
     fun getAll(): List<UserResponse> {
         activeRoleGuard.requireActiveRole(RoleName.ADMIN)
         return userService.getAll()
     }
 
     @PostMapping("/{id}/deactivate")
+    @Operation(
+        summary = "Отключить пользователя",
+        description = "Деактивирует учетную запись пользователя. Администратор не может отключить собственный аккаунт.",
+    )
     fun deactivate(
         @AuthenticationPrincipal principal: UserPrincipal,
         @PathVariable id: Long,
