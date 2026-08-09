@@ -70,7 +70,8 @@ services:
 
 networks:
   eventhub:
-    driver: bridge
+    external: true
+    name: eventhub-net
 
 volumes:
   eventhub-postgres-data:
